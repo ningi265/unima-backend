@@ -73,28 +73,32 @@ mongoose.connect(uri)
 const conn = mongoose.connection;
 
 
+// Multer setup for image uploads
 const storage = multer.diskStorage({
   destination: (req, file, cb) => {
     const dir = './uploads';
-    if (!fs.existsSync(dir)) {
-      fs.mkdirSync(dir, { recursive: true });
-    }
-    cb(null, dir);
+    fs.exists(dir, (exist) => {
+      if (!exist) {
+        return fs.mkdir(dir, { recursive: true }, (error) => cb(error, dir));
+      }
+      return cb(null, dir);
+    });
   },
   filename: (req, file, cb) => {
-    cb(null, `${file.fieldname}_${Date.now()}${path.extname(file.originalname)}`);
+    const uniqueName = `${file.fieldname}_${Date.now()}${path.extname(file.originalname)}`;
+    cb(null, uniqueName);
   }
 });
 
-// Initialize multer with GridFS storage
-const upload = multer({ storage });
-// Middleware
+const upload = multer({ storage: storage });
+
+// Serve static files for images
+app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
+
 app.use(cors());
 app.use(express.json({ limit: '50mb' }));
 app.use(express.urlencoded({ limit: '50mb', extended: true }));
 app.use(bodyParser.json());
-app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
-app.use('/upload', express.static(path.join(__dirname, 'upload/images')));
 
 
 // JWT Authentication Middleware
